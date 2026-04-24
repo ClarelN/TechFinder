@@ -108,14 +108,30 @@
 
     {{-- Tableau des utilisateurs --}}
     <div class="card shadow-sm">
-        <div class="card-header bg-white border-bottom d-flex align-items-center gap-2 py-2">
-            <label for="filterRole" class="form-label mb-0 fw-semibold">Filtrer par rôle :</label>
-            <select id="filterRole" class="form-select form-select-sm w-auto">
-                <option value="tous">Tous</option>
-                <option value="admin">Admin</option>
-                <option value="client">Client</option>
-                <option value="technicien">Technicien</option>
-            </select>
+        <div class="card-header bg-white border-bottom d-flex flex-wrap align-items-center gap-3 py-2">
+            {{-- Recherche --}}
+            <div class="input-group input-group-sm" style="max-width:280px;">
+                <span class="input-group-text bg-light border-end-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.415l-3.868-3.833zm-5.242 1.156a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/>
+                    </svg>
+                </span>
+                <input type="text"
+                       id="searchInput"
+                       class="form-control form-control-sm border-start-0"
+                       placeholder="Code, prénom, nom, tél…">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="clearSearch" title="Effacer">✕</button>
+            </div>
+            {{-- Filtre rôle --}}
+            <div class="d-flex align-items-center gap-2 ms-auto">
+                <label for="filterRole" class="form-label mb-0 fw-semibold small">Rôle :</label>
+                <select id="filterRole" class="form-select form-select-sm w-auto">
+                    <option value="tous">Tous</option>
+                    <option value="admin">Admin</option>
+                    <option value="client">Client</option>
+                    <option value="technicien">Technicien</option>
+                </select>
+            </div>
         </div>
         <div class="card-body p-0">
             <table class="table table-striped table-hover align-middle mb-0">
@@ -286,17 +302,31 @@
         }
     }
 
-    // ===== Pagination & Filtre (côté client) =====
+    // ===== Pagination, Filtre & Recherche (côté client) =====
     const ROWS_PER_PAGE = 5;
-    let currentPage = 1;
+    let currentPage   = 1;
     let currentFilter = 'tous';
+    let currentSearch = '';
+
+    function rowMatchesSearch(row, term) {
+        if (!term) return true;
+        const cells  = row.querySelectorAll('td');
+        const code   = (cells[0]?.textContent || '').trim().toLowerCase();
+        const prenom = (cells[1]?.textContent || '').trim().toLowerCase();
+        const nom    = (cells[2]?.textContent || '').trim().toLowerCase();
+        const tel    = (cells[5]?.textContent || '').replace('—','').trim().toLowerCase();
+        return code.includes(term) || prenom.includes(term) || nom.includes(term) || tel.includes(term);
+    }
 
     function getFilteredRows() {
+        const term = currentSearch.toLowerCase();
         const rows = Array.from(document.querySelectorAll('#utilisateursTable tr[data-id]'));
-        if (currentFilter === 'tous') return rows;
         return rows.filter(row => {
-            const badge = row.querySelector('.badge');
-            return badge && badge.textContent.trim().toLowerCase() === currentFilter;
+            const matchRole = currentFilter === 'tous' || (() => {
+                const badge = row.querySelector('.badge');
+                return badge && badge.textContent.trim().toLowerCase() === currentFilter;
+            })();
+            return matchRole && rowMatchesSearch(row, term);
         });
     }
 
@@ -381,7 +411,20 @@
 
     document.getElementById('filterRole').addEventListener('change', function () {
         currentFilter = this.value;
-        currentPage = 1;
+        currentPage   = 1;
+        renderPage();
+    });
+
+    document.getElementById('searchInput').addEventListener('input', function () {
+        currentSearch = this.value.trim();
+        currentPage   = 1;
+        renderPage();
+    });
+
+    document.getElementById('clearSearch').addEventListener('click', function () {
+        document.getElementById('searchInput').value = '';
+        currentSearch = '';
+        currentPage   = 1;
         renderPage();
     });
 
